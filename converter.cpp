@@ -32,18 +32,44 @@ class converter {
     private:
         string url;
         classInfo* getUserInput();
+        classInfo* cI;
+        float getAvgStudyHrs(string s);
 };
 
 converter::converter(){
-    /*
-   classInfo* cI = new classInfo();
-   cI->subject = "CSE";
-   cI->num = 12;
-   */
-    classInfo* cI = getUserInput();
+    cI = getUserInput();
     cerr << "Got subject:" << cI->subject << "\nGot number:"<<cI->num<<endl;
     generateFile(cI->subject,cI->num);
-    cout << getOutput("head.txt") << endl;
+    //ofstream out("output.txt");
+    string formattedStr = getOutput("head.txt");
+    //out << getOutput("head.txt") << endl;
+    //out.close();
+    cerr<<"Avg study hours/wk:"<<getAvgStudyHrs(formattedStr)<<endl;
+}
+float converter::getAvgStudyHrs(string s){
+    size_t pos = 0;
+    float sum = 0;
+    int count = 0;
+    string subject = cI->subject;
+    string num = cI->num;
+    while ( pos != -1 && count < 10 ) {
+        bool correctClass = true;
+        //pos = s.find(subject + " " + num);
+        //cerr << s.at(s.find(subject + " " + num) + subject.length() + num.length() + 1) << endl;
+        //if ( s.at(pos + subject.length() + 1 + num.length()) != ' ') correctClass = false;
+        pos = s.find("%",pos) + 1;
+        pos = s.find("%",pos);
+        //if ( pos != -1 && correctClass ) {
+        if ( pos != -1 ) {
+            pos++;
+            while ( pos < s.length() && s.at(pos)==' ') pos++;
+            sum += stof(s.substr(pos).c_str());
+            cerr << "Got num:"<<stof(s.substr(pos).c_str())<<endl;
+            count++;
+        }
+    }
+    return (float)sum/count;
+    // aim: search for first two '%' then extract hrs/wk after second '%'
 }
 classInfo* converter::getUserInput(){
     string input = "";
