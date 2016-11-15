@@ -13,7 +13,6 @@ using namespace std;
 string getCourseSubject(string str);
 string getCourseNumber(string str);
 void generateFile(string s, string n);
-string getOutput(string fileName);
 
 static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream)
 {
@@ -33,12 +32,13 @@ class converter {
         string url;
         classInfo* getUserInput();
         classInfo* cI;
-        float getAvgStudyHrs(string s);
+        float getAvgStudyHrs(string s, int numSearches = 10);
+        string getOutput(string fileName);
 };
 
 converter::converter(){
     cI = getUserInput();
-    cerr << "Got subject:" << cI->subject << "\nGot number:"<<cI->num<<endl;
+    //cerr << "Got subject:" << cI->subject << "\nGot number:"<<cI->num<<endl;
     generateFile(cI->subject,cI->num);
     //ofstream out("output.txt");
     string formattedStr = getOutput("head.txt");
@@ -46,22 +46,22 @@ converter::converter(){
     //out.close();
     cerr<<"Avg study hours/wk:"<<getAvgStudyHrs(formattedStr)<<endl;
 }
-float converter::getAvgStudyHrs(string s){
+// calculate average study hours
+float converter::getAvgStudyHrs(string s, int numSearches){
+
     size_t pos = 0;
     float sum = 0;
     int count = 0;
     string subject = cI->subject;
     string num = cI->num;
-    while ( pos != -1 && count < 10 ) {
-        bool correctClass = true;
-        //pos = s.find(subject + " " + num);
-        //cerr << s.at(s.find(subject + " " + num) + subject.length() + num.length() + 1) << endl;
-        //if ( s.at(pos + subject.length() + 1 + num.length()) != ' ') correctClass = false;
+
+    // gets study hours/wk by looking at number after second '%'
+    while ( pos != -1 && count < numSearches ) {
         pos = s.find("%",pos) + 1;
         pos = s.find("%",pos);
-        //if ( pos != -1 && correctClass ) {
         if ( pos != -1 ) {
             pos++;
+            // skip over spaces after '%' until reach number
             while ( pos < s.length() && s.at(pos)==' ') pos++;
             sum += stof(s.substr(pos).c_str());
             cerr << "Got num:"<<stof(s.substr(pos).c_str())<<endl;
@@ -69,8 +69,8 @@ float converter::getAvgStudyHrs(string s){
         }
     }
     return (float)sum/count;
-    // aim: search for first two '%' then extract hrs/wk after second '%'
 }
+// gets input from user and inputs into struct
 classInfo* converter::getUserInput(){
     string input = "";
     cout << "Enter class: ";
@@ -168,14 +168,9 @@ static std::string cleantext(GumboNode* node) {
   }
 }
 
-string getOutput(string fileName){ 
-  /*
-  if (argc != 2) {
-    std::cout << "Usage: clean_text <html filename>\n";
-    exit(EXIT_FAILURE);
-  }
-  */
-  //const char* filename = argv[1];
+// Returns string containing parsed text
+string converter::getOutput(string fileName){ 
+
   const char* filename = fileName.c_str();
 
   std::ifstream in(filename, std::ios::in | std::ios::binary);
@@ -193,8 +188,45 @@ string getOutput(string fileName){
 
   GumboOutput* output = gumbo_parse(contents.c_str());
   string ans = cleantext(output->root);
-  //std::cout << cleantext(output->root) << std::endl;
+
+  int pos = 0;
+  //string s = "CSE 12";
+  string s = cI->subject + " " + cI->num;
+  unsigned int len = s.length();
+  int count = 0;
+
+  // find every instance of subject that is not actual subject
+  // ex: CSE123 showing up in searches for CSE12
+  pos = ans.find(s,pos);
+  while( pos != -1 ) {//  && count < 100 ) {
+  //while( ans.at(pos = ans.find(s,pos) + len) != ' '  ) { 
+     //remove both %s
+      //cerr << "Found string: 
+      if( isdigit(ans.at(pos+len)) ) {
+     //if ( ans.at(pos+len) != ' ' ) {
+         //cerr << "it's a number:" << ans.substr(pos+len-10, 20) << endl;
+         //cerr << "=" << ans.at(pos+len) << endl;
+         pos = ans.find("%",pos); 
+         if ( pos == -1 ) break;
+         ans = ans.replace(pos,1," ");
+         //cerr << "Deleting % - 1" << endl;
+
+         pos = ans.find("%",pos); 
+         if ( pos == -1 ) break;
+         ans = ans.replace(pos,1," "); 
+         //cerr << "Deleting % - 2" << endl;
+     }
+     else {
+        //cerr << "NOT a number:\n" << ans.at(pos+len) << endl;
+     }
+     pos = ans.find(s,pos+1);
+     //count++;
+  }
+
+  //std::cerr << cleantext(output->root) << std::endl;
   gumbo_destroy_output(&kGumboDefaultOptions, output);
+  //cerr << "===\n===\n===" << endl;
+  //cerr << ans << endl;
   return ans;
 }
 
